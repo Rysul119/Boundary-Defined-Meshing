@@ -1,0 +1,287 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>boundary_defined_mesh</title><meta name="generator" content="MATLAB 8.5"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2018-04-30"><meta name="DC.source" content="boundary_defined_mesh.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; } 
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><pre class="codeinput"><span class="comment">% Modified from the code published by Jay Oswald (ASU) to adopt a arithmetic series of nodes</span>
+<span class="comment">% Creates a mesh of nx by ny elements</span>
+<span class="comment">% with element ratio erx and ery in the x and y direction, element ratio is the ratio of the size(length) of the last and first element</span>
+<span class="comment">% with length of lx and ly in the x and y directions.</span>
+<span class="comment">% The origin (lower left) can be optionally specified as x0, y0.</span>
+<span class="comment">% Takes an 2x1 array (node reference coordinates) of the previous boundary selection</span>
+<span class="comment">% Try making it generalized so that it can be used in initial meshing too</span>
+<span class="comment">% ^done</span>
+<span class="keyword">function</span> [m] = boundary_defined_mesh(erx, ery, nx, ny, xf, yf, x0, y0, pX)
+    <span class="comment">% if origin is not specified, then set it to zero.</span>
+    <span class="keyword">if</span> nargin &lt; 7, x0 = 0; <span class="keyword">end</span>
+    <span class="keyword">if</span> nargin &lt; 8, y0 = 0; <span class="keyword">end</span>
+    <span class="comment">%For the initial meshing</span>
+    <span class="keyword">if</span> nargin &lt; 9
+        pX = 0;
+        s = size (pX);
+        pnx = 0;
+        m.num_nodes = (nx+1)*(ny+1);
+    <span class="keyword">else</span>
+        s = size (pX);
+        <span class="comment">%previous number of elements</span>
+        <span class="keyword">if</span> (rem(s(2),ny+1)), error(<span class="string">'Number of elements in the y direction should match the initially generated mesh.'</span>); <span class="keyword">end</span>
+        pnx = (s(2)/(ny+1))-1;
+        m.num_nodes = s(2)+(nx*(ny+1));
+    <span class="keyword">end</span>
+
+    <span class="comment">%length of the edge/boundary</span>
+    lx = abs(xf-x0);
+    ly = abs(yf-y0);
+
+    <span class="comment">%first element size(length along x and y direction)</span>
+    ax = (2*lx/(nx*(erx+1)));
+    ay = (2*ly/(ny*(ery+1)));
+
+    <span class="comment">%Constant difference in size(length along x and y direction) between two successive elements</span>
+    dx = ((2*lx*(erx-1))/(nx*(nx-1)*(erx+1)));
+    dy = ((2*ly*(ery-1))/(ny*(ny-1)*(ery+1)));
+
+    <span class="comment">%Arithmetic series counter</span>
+    cx = 0;
+    cy = 0;
+    <span class="comment">%Nodal reference coordinates.</span>
+    m.X = zeros(2, m.num_nodes);
+    m.X(:,1) = [x0; y0];
+
+    <span class="keyword">for</span> j=1:ny+1
+        <span class="keyword">if</span> j&gt;2, cy = cy+(j-2); <span class="keyword">end</span>
+        <span class="keyword">for</span> i=1:(pnx+nx+1)
+           <span class="comment">%assigns the old node numbers to the newer one</span>
+           <span class="keyword">if</span>((i&lt;(pnx+2))&amp;&amp;(s(2)&gt;1)),  m.X(:,i+(j-1)*(pnx+nx+1)) = pX(:,i+(j-1)*(nx+1));
+           <span class="keyword">else</span>
+               m.X(:,i+(j-1)*(pnx+nx+1)) = [x0+(i-(pnx+1))*ax; y0+(j-1)*ay];
+               <span class="keyword">if</span> i&gt;pnx+2, cx = cx+(i-(pnx+2)); m.X(1,i+(j-1)*(pnx+nx+1)) = m.X(1,i+(j-1)*(pnx+nx+1))+ cx*dx; <span class="keyword">end</span>
+               <span class="keyword">if</span> j&gt;2, m.X(2,i+(j-1)*(pnx+nx+1)) = m.X(2,i+(j-1)*(pnx+nx+1))+ cy*dy; <span class="keyword">end</span>
+           <span class="keyword">end</span>
+        <span class="keyword">end</span>
+        cx = 0;
+    <span class="keyword">end</span>
+    m.num_elements = (nx*ny)+(pnx*ny);
+    m.connectivity = zeros(4, m.num_elements);
+    <span class="keyword">for</span> j=1:ny
+        <span class="keyword">for</span> i=1:(pnx+nx)
+            <span class="comment">% first node in element</span>
+            n0 = i+(j-1)*(pnx+nx+1);
+            m.connectivity(:,i+(j-1)*(pnx+nx)) = [n0; n0+1; n0+pnx+nx+2; n0+1+pnx+nx];
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">% 4 point Gaussian quadrature rule.</span>
+    m.quad_points = [-1, 1, 1,-1;
+                     -1,-1, 1, 1] / sqrt(3);
+    m.quad_points = [m.quad_points; 1,1,1,1];
+
+    <span class="comment">% Call as mesh.draw() to draw this mesh.</span>
+    m.draw =       @() plot_mesh(m);
+    <span class="comment">% Call as mesh.draw_nodal(f) to plot mesh colored by nodal value f.</span>
+    m.draw_nodal = @(f)plot_nodal(m,f);
+<span class="keyword">end</span>
+<span class="keyword">function</span> [] = plot_mesh(m)
+    p.vertices = m.X';
+    p.faces = m.connectivity';
+    p.facecolor = <span class="string">'none'</span>;
+    patch(p);
+<span class="keyword">end</span>
+<span class="keyword">function</span>[] = plot_nodal(m, f)
+    p.vertices = m.X';
+    p.faces = m.connectivity';
+    p.facecolor = <span class="string">'interp'</span>;
+    p.facevertexcdata = f;
+    patch(p);
+<span class="keyword">end</span>
+</pre><p><b>Command Windows Prompt</b></p><pre class="language-matlab">&gt;&gt;a=boundary_defined_mesh(1/3,3,10,10,5,5);
+&gt;&gt;plot_mesh(a);
+</pre><p><img vspace="5" hspace="5" src="images/Mesh1.PNG" alt=""> </p><p><b>Command Windows Prompt</b></p><pre class="language-matlab">&gt;&gt;b=boundary_defined_mesh(3,3,10,10,10,5,5,0,a.X);
+&gt;&gt;plot_mesh(b)
+</pre><p><img vspace="5" hspace="5" src="images/Mesh2.PNG" alt=""> </p><pre class="language-matlab">&gt;&gt;g = rand(b.num_nodes,1);
+&gt;&gt;plot_nodal(b,g)
+</pre><p><img vspace="5" hspace="5" src="images/Mesh2_dat.PNG" alt=""> </p><p class="footer"><br><a href="http://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2015a</a><br></p></div><!--
+##### SOURCE BEGIN #####
+% Modified from the code published by Jay Oswald (ASU) 
+% Creates a mesh of nx by ny elements
+% with element ratio erx and ery in the x and y direction, element ratio is the ratio of the size(length) of the last and first element
+% with length of lx and ly in the x and y directions.
+% The origin (lower left) can be optionally specified as x0, y0.
+% Takes an 2x1 array (node reference coordinates) of the previous boundary selection
+% Try making it generalized so that it can be used in initial meshing too
+% ^done
+function [m] = boundary_defined_mesh(erx, ery, nx, ny, xf, yf, x0, y0, pX)
+    % if origin is not specified, then set it to zero.
+    if nargin < 7, x0 = 0; end
+    if nargin < 8, y0 = 0; end
+    %For the initial meshing
+    if nargin < 9 
+        pX = 0;
+        s = size (pX);
+        pnx = 0;
+        m.num_nodes = (nx+1)*(ny+1);
+    else
+        s = size (pX);
+        %previous number of elements
+        if (rem(s(2),ny+1)), error('Number of elements in the y direction should match the initially generated mesh.'); end
+        pnx = (s(2)/(ny+1))-1;
+        m.num_nodes = s(2)+(nx*(ny+1));
+    end
+    
+    %length of the edge/boundary
+    lx = abs(xf-x0);
+    ly = abs(yf-y0);
+
+    %first element size(length along x and y direction) 
+    ax = (2*lx/(nx*(erx+1)));
+    ay = (2*ly/(ny*(ery+1)));
+
+    %Constant difference in size(length along x and y direction) between two successive elements
+    dx = ((2*lx*(erx-1))/(nx*(nx-1)*(erx+1)));
+    dy = ((2*ly*(ery-1))/(ny*(ny-1)*(ery+1)));
+    
+    %Arithmetic series counter
+    cx = 0;
+    cy = 0;
+    %Nodal reference coordinates.
+    m.X = zeros(2, m.num_nodes); 
+    m.X(:,1) = [x0; y0];
+    
+    for j=1:ny+1
+        if j>2, cy = cy+(j-2); end
+        for i=1:(pnx+nx+1)
+           %assigns the old node numbers to the newer one
+           if((i<(pnx+2))&&(s(2)>1)),  m.X(:,i+(j-1)*(pnx+nx+1)) = pX(:,i+(j-1)*(nx+1));
+           else    
+               m.X(:,i+(j-1)*(pnx+nx+1)) = [x0+(i-(pnx+1))*ax; y0+(j-1)*ay];           
+               if i>pnx+2, cx = cx+(i-(pnx+2)); m.X(1,i+(j-1)*(pnx+nx+1)) = m.X(1,i+(j-1)*(pnx+nx+1))+ cx*dx; end
+               if j>2, m.X(2,i+(j-1)*(pnx+nx+1)) = m.X(2,i+(j-1)*(pnx+nx+1))+ cy*dy; end
+           end
+        end
+        cx = 0;
+    end
+    m.num_elements = (nx*ny)+(pnx*ny);
+    m.connectivity = zeros(4, m.num_elements);
+    for j=1:ny
+        for i=1:(pnx+nx)           
+            % first node in element
+            n0 = i+(j-1)*(pnx+nx+1);            
+            m.connectivity(:,i+(j-1)*(pnx+nx)) = [n0; n0+1; n0+pnx+nx+2; n0+1+pnx+nx];            
+        end
+    end
+        
+    % 4 point Gaussian quadrature rule.
+    m.quad_points = [-1, 1, 1,-1;
+                     -1,-1, 1, 1] / sqrt(3);
+    m.quad_points = [m.quad_points; 1,1,1,1];
+
+    % Call as mesh.draw() to draw this mesh.
+    m.draw =       @() plot_mesh(m);
+    % Call as mesh.draw_nodal(f) to plot mesh colored by nodal value f.
+    m.draw_nodal = @(f)plot_nodal(m,f);
+end
+function [] = plot_mesh(m)
+    p.vertices = m.X';
+    p.faces = m.connectivity';
+    p.facecolor = 'none';
+    patch(p);
+end
+function[] = plot_nodal(m, f)
+    p.vertices = m.X';
+    p.faces = m.connectivity';
+    p.facecolor = 'interp';
+    p.facevertexcdata = f;
+    patch(p);    
+end
+%%
+% *Command Windows Prompt*
+%%
+%   >>a=boundary_defined_mesh(1/3,3,10,10,5,5);
+%   >>plot_mesh(a);
+%%
+% 
+% <<Mesh1.PNG>>
+% 
+%%
+% *Command Windows Prompt*
+%%  
+%   >>b=boundary_defined_mesh(3,3,10,10,10,5,5,0,a.X);
+%   >>plot_mesh(b)     
+%%
+% 
+% <<Mesh2.PNG>>
+% 
+%%
+%   >>g = rand(b.num_nodes,1);
+%   >>plot_nodal(b,g)   
+%%
+% 
+% <<Mesh2_dat.PNG>>
+% 
+
+
+##### SOURCE END #####
+--></body></html>
